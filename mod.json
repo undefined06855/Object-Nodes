@@ -6,9 +6,14 @@
 		"mac": "2.2074",
 		"ios": "2.2074"
 	},
+
 	"id": "undefined0.object_nodes",
 	"name": "Object Nodes",
 	"version": "v1.0.0",
 	"developer": "undefined0",
-	"description": ""
+	"description": "Easy place blocks procedurally with nodes!",
+
+	"dependencies": {
+		"alphalaneous.editortab_api": "v1.0.10"
+	}
 }

@@ -1,10 +1,10 @@
 #include "GUIManager.hpp"
 #include "utils.hpp"
+#include <Geode/binding/LevelEditorLayer.hpp>
 #include <imnodes.h>
 
 GuiManager::GuiManager()
-    : m_guiScale(1.f)
-    , m_guiShowing(false)
+    : m_barShowing(false)
     , m_links({}) {}
 
 GuiManager& GuiManager::get() {
@@ -29,18 +29,19 @@ void GuiManager::destroy() {
 }
 
 void GuiManager::draw() {
-    if (!m_guiShowing) return;
+    if (!m_barShowing || LevelEditorLayer::get()->getChildByID("EditorPauseLayer")) return;
     
     auto director = cocos2d::CCDirector::sharedDirector();
-    auto height = director->m_obResolutionInPixels.height;
+    auto width = director->m_obResolutionInPixels.width;
+    auto ccwidth = cocos2d::CCScene::get()->getScaledContentWidth();
+    auto scaleFactor = width / ccwidth;
     cocos2d::CCSize size = {
-        height * .85f * 1.6f,
-        height * .85f
+        350.f * scaleFactor,
+        85.f * scaleFactor
     };
-    size *= m_guiScale;
     cocos2d::CCPoint pos = {
         (director->m_obResolutionInPixels.width / 2.f) - (size.width / 2.f),
-        (director->m_obResolutionInPixels.height / 2.f) - (size.height / 2.f),
+        (director->m_obResolutionInPixels.height - size.height - (2.5f * scaleFactor))
     };
     ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
     ImGui::SetNextWindowSize(ImVec2(size.width, size.height));

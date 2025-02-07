@@ -8,8 +8,7 @@ public:
     GuiManager();
     static GuiManager& get();
 
-    float m_guiScale;
-    bool m_guiShowing;
+    bool m_barShowing;
 
     std::vector<sp_LinkData> m_links;
     std::vector<sp_GuiNode> m_nodes;
