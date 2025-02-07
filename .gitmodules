@@ -1,0 +1,4 @@
+[submodule "lib/imnodes"]
+	path = lib/imnodes
+	url = https://github.com/Auburn/imnodes/
+	branch = zoom2
