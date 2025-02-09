@@ -4,4 +4,6 @@
 class $modify(HookedCCEGLView, cocos2d::CCEGLView) {
     void onGLFWMouseCallBack(GLFWwindow* window, int button, int action, int mods);
     void onGLFWMouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
+
+    void toggleFullScreen(bool fullscreen, bool borderless, bool fix);
 };

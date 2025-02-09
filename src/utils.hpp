@@ -9,4 +9,6 @@ unsigned int pinColorForType(PinType pinType);
 
 unsigned int brightenColor(unsigned int imGuiColor, int amount);
 
+cocos2d::CCNode* createHR();
+
 }

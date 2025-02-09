@@ -3,14 +3,13 @@
 #include "utils.hpp"
 #include "GUIManager.hpp"
 
-unsigned int g_lastNodeID = 0;
 GuiNode::GuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs)
     : m_title(title)
     , m_color(color)
     , m_inputs(inputs)
     , m_outputs(outputs)
     , m_width(170.f)
-    , m_id(g_lastNodeID++) {}
+    , m_id(GuiManager::get().getNextNodeID()) {}
 
 void GuiNode::draw() {
     ImNodes::PushStyleVar(ImNodesStyleVar_NodePadding, ImVec2(8.f, 5.f));

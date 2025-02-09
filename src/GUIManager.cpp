@@ -5,7 +5,13 @@
 
 GuiManager::GuiManager()
     : m_barShowing(false)
-    , m_links({}) {}
+    , m_links({})
+
+    , m_nodeIDsInUse({})
+    , m_pinIDsInUse({})
+    
+    , m_recentlyDeletedNodeIDs({})
+    , m_recentlyDeletedPinIDs({}) {}
 
 GuiManager& GuiManager::get() {
     static GuiManager instance;
@@ -29,20 +35,31 @@ void GuiManager::destroy() {
 }
 
 void GuiManager::draw() {
-    if (!m_barShowing || LevelEditorLayer::get()->getChildByID("EditorPauseLayer")) return;
+    if (!m_barShowing) return;
+
+    int persistedNodes = geode::SceneManager::get()->getPersistedNodes().size();
+    // taken from editormusic to see if there's any overlays
+    // TODO: this may still run for geode notifications idk are they persisted
+    int lowPassStrength = cocos2d::CCScene::get()->getChildrenCount() - persistedNodes - 1;
+    if (LevelEditorLayer::get() && LevelEditorLayer::get()->getChildByID("EditorPauseLayer")) lowPassStrength++;
+    if (cocos2d::CCScene::get()->getChildByID("thesillydoggo.qolmod/QOLModButton")) lowPassStrength--;
+    if (cocos2d::CCScene::get()->getChildByID("hjfod.quick-volume-controls/overlay")) lowPassStrength--;
+
+    if (lowPassStrength > 0) return;
     
     auto director = cocos2d::CCDirector::sharedDirector();
     auto width = director->m_obResolutionInPixels.width;
     auto ccwidth = cocos2d::CCScene::get()->getScaledContentWidth();
     auto scaleFactor = width / ccwidth;
     cocos2d::CCSize size = {
-        350.f * scaleFactor,
+        370.f * scaleFactor,
         85.f * scaleFactor
     };
     cocos2d::CCPoint pos = {
         (director->m_obResolutionInPixels.width / 2.f) - (size.width / 2.f),
         (director->m_obResolutionInPixels.height - size.height - (2.5f * scaleFactor))
     };
+    size.width -= 40.f * scaleFactor;
     ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
     ImGui::SetNextWindowSize(ImVec2(size.width, size.height));
 
@@ -93,7 +110,7 @@ void GuiManager::draw() {
 
     int id;
     if (ImNodes::IsLinkDestroyed(&id)) {
-        m_links.erase(m_links.begin() + id);
+        deleteLink(id);
     }
 
     // zoom only available because we're using Auburn's fork of imnodes
@@ -152,6 +169,14 @@ std::vector<sp_LinkData> GuiManager::linkDataForPinID(int id) {
 //     return nullptr;
 // }
 
+bool GuiManager::nodeIDExists(unsigned int id) {
+    return std::find(m_nodeIDsInUse.begin(), m_nodeIDsInUse.end(), id) != m_nodeIDsInUse.end();
+}
+
+bool GuiManager::pinIDExists(int id) {
+    return std::find(m_pinIDsInUse.begin(), m_pinIDsInUse.end(), id) != m_pinIDsInUse.end();
+}
+
 sp_GuiNode GuiManager::nodeForPinID(int id) {
     for (auto node : m_nodes) {
         for (auto input : node->m_inputs) {
@@ -165,4 +190,79 @@ sp_GuiNode GuiManager::nodeForPinID(int id) {
 
     geode::log::error("Could not find node data for pin {}!", id);
     return nullptr;
+}
+
+
+unsigned int GuiManager::getNextNodeID() {
+    if (!m_recentlyDeletedNodeIDs.empty()) {
+        auto ret = m_recentlyDeletedNodeIDs.front();
+        m_recentlyDeletedNodeIDs.pop_front();
+        return ret;
+    }
+
+    // scary!
+    unsigned int ret = 0;
+    while (true) {
+        if (!nodeIDExists(ret)) {
+            m_nodeIDsInUse.push_back(ret);
+            return ret;
+        }
+        ret++;
+    }
+}
+
+int GuiManager::getNextPinID() {
+    if (!m_recentlyDeletedPinIDs.empty()) {
+        auto ret = m_recentlyDeletedPinIDs.front();
+        m_recentlyDeletedPinIDs.pop_front();
+        return ret;
+    }
+
+    // scary!
+    int ret = 0;
+    while (true) {
+        if (!pinIDExists(ret)) {
+            m_pinIDsInUse.push_back(ret);
+            return ret;
+        }
+        ret++;
+    }
+}
+
+void GuiManager::deleteNode(unsigned int id) {
+    // >:(
+    sp_GuiNode node;
+    for (auto checkNode : m_nodes) {
+        if (checkNode->m_id == id) {
+            // ah ha
+            node = checkNode;
+            break;
+        }
+    }
+
+    if (!node) {
+        geode::log::error("Attempted to delete nonexistent node {}!", id);
+        return;
+    }
+
+    m_recentlyDeletedNodeIDs.push_back(id);
+    m_nodeIDsInUse.erase(std::remove(m_nodeIDsInUse.begin(), m_nodeIDsInUse.end(), id), m_nodeIDsInUse.end());
+
+    for (auto pin : node->m_inputs) {
+        m_recentlyDeletedPinIDs.push_back(pin->m_id);
+        m_pinIDsInUse.erase(std::remove(m_pinIDsInUse.begin(), m_pinIDsInUse.end(), pin->m_id), m_pinIDsInUse.end());
+    }
+
+    for (auto pin : node->m_outputs) {
+        m_recentlyDeletedPinIDs.push_back(pin->m_id);
+        m_pinIDsInUse.erase(std::remove(m_pinIDsInUse.begin(), m_pinIDsInUse.end(), pin->m_id), m_pinIDsInUse.end());
+    }
+
+    m_nodes.erase(std::remove(m_nodes.begin(), m_nodes.end(), node), m_nodes.end());
+}
+
+void GuiManager::deleteLink(int id) {
+    // link ids are always just the index they are in the list of links
+    // nice and simple
+    m_links.erase(m_links.begin() + id);
 }

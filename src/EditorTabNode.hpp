@@ -7,9 +7,10 @@ public:
     bool init();
 
     cocos2d::CCMenu* m_buttonMenu;
-    cocos2d::CCNode* m_mainNode;
 
     void setVisible(bool visible);
 
-    void onRun(cocos2d::CCObject* sender);
+    void onCommit(cocos2d::CCObject* sender);
+    void onSave(cocos2d::CCObject* sender);
+    void onLoad(cocos2d::CCObject* sender);
 };

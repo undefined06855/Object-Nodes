@@ -45,4 +45,16 @@ unsigned int brightenColor(unsigned int imGuiColor, int amount) {
     return IM_COL32(red, green, blue, alpha);
 }
 
+cocos2d::CCNode* createHR() {
+    auto wrapper = cocos2d::CCNode::create();
+    auto spr = cocos2d::CCSprite::createWithSpriteFrameName("edit_vLine_001.png");
+    spr->setRotation(90.f);
+    spr->setColor({ 80, 80, 80 });
+    spr->setOpacity(180);
+    spr->setScaleY(.5f);
+    wrapper->addChild(spr);
+    wrapper->setContentSize(spr->getScaledContentSize());
+    return wrapper;
+}
+
 }

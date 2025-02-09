@@ -1,8 +1,7 @@
 #include "GUIManager.hpp"
-#include <imgui-cocos.hpp>
-#include <Geode/modify/CCEGLView.hpp>
-#include <alphalaneous.editortab_api/include/EditorTabs.hpp>
 #include "EditorTabNode.hpp"
+#include <alphalaneous.editortab_api/include/EditorTabs.hpp>
+#include <imgui-cocos.hpp>
 
 $on_mod(Loaded) {
     ImGuiCocos::get()
@@ -21,16 +20,3 @@ $on_mod(Loaded) {
         return EditorTabNode::create();
     });
 }
-
-class $modify(cocos2d::CCEGLView) {
-	void toggleFullScreen(bool fullscreen, bool borderless, bool fix) {
-		if (!ImGuiCocos::get().isInitialized()) {
-            CCEGLView::toggleFullScreen(fullscreen, borderless, fix);
-            return;
-        }
-
-        // this is when imgui cocos destroy gets called and i want to call my shit here as well
-		GuiManager::get().destroy();
-		CCEGLView::toggleFullScreen(fullscreen, borderless, fix);
-	}
-};
