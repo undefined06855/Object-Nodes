@@ -1,35 +1,34 @@
 #include "utils.hpp"
-#include <typeindex>
 
 namespace on::utils {
 
 ImNodesPinShape pinShapeForType(PinType pinType) {
     // get it because like a pin cushion haha funny right
-    std::map<std::type_index, ImNodesPinShape> cushion = {
-        { typeid(bool), ImNodesPinShape_CircleFilled },
-        { typeid(double), ImNodesPinShape_CircleFilled },
-        { typeid(cocos2d::CCPoint), ImNodesPinShape_CircleFilled },
-        { typeid(cocos2d::ccColor4B), ImNodesPinShape_CircleFilled },
-        { typeid(GameObject*), ImNodesPinShape_QuadFilled }
+    std::array<ImNodesPinShape, 5> cushion = {
+        /* bool */ ImNodesPinShape_CircleFilled,
+        /* double */ ImNodesPinShape_CircleFilled,
+        /* ccpoint */ ImNodesPinShape_CircleFilled,
+        /* ccColor4F */ ImNodesPinShape_CircleFilled,
+        /* sp_GameObjectData */ ImNodesPinShape_QuadFilled
     };
 
-    return std::visit([&](auto&& value) {
-        return cushion.find(typeid(std::decay_t<decltype(value)>))->second;
-    }, pinType);
+    return cushion[pinType.index()];
 }
 
 unsigned int pinColorForType(PinType pinType) {
-    std::map<std::type_index, unsigned int> colors = {
-        { typeid(bool), IM_COL32(179, 107, 194, 255) }, // lilac
-        { typeid(double), IM_COL32(128, 128, 128, 255) }, // grey
-        { typeid(cocos2d::CCPoint), IM_COL32(94, 32, 201, 255) },  // purple
-        { typeid(cocos2d::ccColor4B), IM_COL32(225, 232, 14, 255) }, // yellow
-        { typeid(GameObject*), IM_COL32(252, 186, 3, 255) }   // orange
+    std::array<ImU32, 5> colors = {
+        /* bool */ IM_COL32(179, 107, 194, 255), // lilac
+        /* double */ IM_COL32(128, 128, 128, 255), // grey
+        /* ccpoint */ IM_COL32(94, 32, 201, 255), // purple
+        /* ccColor4F */ IM_COL32(225, 232, 14, 255), // yellow
+        /* sp_GameObjectData */ IM_COL32(252, 186, 3, 255) // orange
     };
 
-    return std::visit([&](auto&& value) {
-        return colors.find(typeid(std::decay_t<decltype(value)>))->second;
-    }, pinType);
+    return colors[pinType.index()];
+}
+
+bool shouldSkipPin(sp_PinData pin) {
+    return pin->m_isSpacerPin || pin->m_value.index() == 5;
 }
 
 unsigned int brightenColor(unsigned int imGuiColor, int amount) {
@@ -45,16 +44,18 @@ unsigned int brightenColor(unsigned int imGuiColor, int amount) {
     return IM_COL32(red, green, blue, alpha);
 }
 
-cocos2d::CCNode* createHR() {
-    auto wrapper = cocos2d::CCNode::create();
-    auto spr = cocos2d::CCSprite::createWithSpriteFrameName("edit_vLine_001.png");
-    spr->setRotation(90.f);
-    spr->setColor({ 80, 80, 80 });
-    spr->setOpacity(180);
-    spr->setScaleY(.5f);
-    wrapper->addChild(spr);
-    wrapper->setContentSize(spr->getScaledContentSize());
-    return wrapper;
+std::string cutOffImGuiString(std::string string, float maxWidth) {
+    if (ImGui::CalcTextSize(string.c_str()).x < maxWidth) return string;
+
+    bool changed = false;
+    string += "...";
+    while (ImGui::CalcTextSize(string.c_str()).x > maxWidth) {
+        string = string.substr(0, string.length() - 4);
+        string += "...";
+        changed = true;
+    }
+
+    return string;
 }
 
 }

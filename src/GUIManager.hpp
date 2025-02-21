@@ -1,6 +1,5 @@
 #pragma once
-#include "nodes/nodes.hpp"
-#include <deque>
+#include "GUINode.hpp"
 
 class GuiManager {
 public:
@@ -8,33 +7,21 @@ public:
     static GuiManager& get();
 
     bool m_barShowing;
+    float m_expansionPercent;
 
-    std::vector<sp_LinkData> m_links;
-    std::vector<sp_GuiNode> m_nodes;
+    bool m_addNodeMenuShowing;
 
-    std::vector<unsigned int> m_nodeIDsInUse;
-    std::vector<int> m_pinIDsInUse;
+    bool m_showDebug;
 
-    std::deque<unsigned int> m_recentlyDeletedNodeIDs;
-    std::deque<int> m_recentlyDeletedPinIDs;
+    std::map<std::string, std::function<sp_GuiNode()>> m_addNodeMenuButtons;
+    std::vector<std::string> m_addNodeMenuSplits;
 
     void setup();
-    void draw();
     void destroy();
-    void compute();
 
-    bool canPinsConnect(int from, int to);
+    void update(float dt);
+    void draw();
+    void drawAddNodeMenu();
 
-    sp_PinData pinDataForPinID(int id);
-    std::vector<sp_LinkData> linkDataForPinID(int id);
-    // sp_GuiNode nodeForNodeID(unsigned int id);
-    bool nodeIDExists(unsigned int id);
-    bool pinIDExists(int id);
-    sp_GuiNode nodeForPinID(int id);
-
-    unsigned int getNextNodeID();
-    int getNextPinID();
-
-    void deleteNode(unsigned int id);
-    void deleteLink(int id);
+    void updatePreview();
 };

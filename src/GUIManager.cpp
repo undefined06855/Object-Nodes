@@ -1,22 +1,28 @@
 #include "GUIManager.hpp"
+#include "EditorTabNode.hpp"
+#include "GUINode.hpp"
+#include "nodes/MergeSplitColorNodes.hpp"
+#include "nodes/OutputNode.hpp"
+#include "nodes/nodes.hpp"
 #include "utils.hpp"
-#include <Geode/binding/LevelEditorLayer.hpp>
+#include "NodeManager.hpp"
+#include <imgui.h>
 #include <imnodes.h>
 
 GuiManager::GuiManager()
     : m_barShowing(false)
-    , m_links({})
-
-    , m_nodeIDsInUse({})
-    , m_pinIDsInUse({})
-    
-    , m_recentlyDeletedNodeIDs({})
-    , m_recentlyDeletedPinIDs({}) {}
+    , m_expansionPercent(0.f)
+    , m_addNodeMenuShowing(false)
+    , m_showDebug(false)
+    , m_addNodeMenuButtons({})
+    , m_addNodeMenuSplits({}) {}
 
 GuiManager& GuiManager::get() {
     static GuiManager instance;
     return instance;
 }
+
+#define NODE_MENU_BUTTON(Type) []{ return std::make_shared<Type>(); }
 
 void GuiManager::setup() {
     ImNodes::CreateContext();
@@ -25,13 +31,46 @@ void GuiManager::setup() {
     ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
     ImNodes::GetIO().MultipleSelectModifier.Modifier = &ImGui::GetIO().KeyShift;
 
-    m_nodes.push_back(std::make_shared<TestConstantsNode>());
-    m_nodes.push_back(std::make_shared<TestMultiply>());
-    m_nodes.push_back(std::make_shared<TestOutput>());
+    ImGuiIO& io = ImGui::GetIO();
+    auto path = (geode::Mod::get()->getResourcesDir() / "NunitoSansMedium.ttf");
+    io.FontDefault = io.Fonts->AddFontFromFileTTF(path.string().c_str(), 16.f);
+
+    m_addNodeMenuButtons = {
+        { "Create Object", NODE_MENU_BUTTON(CreateObjectNode) },
+        { "Selected Objects", NODE_MENU_BUTTON(SelectedObjectsNode) },
+        { "Output", NODE_MENU_BUTTON(OutputNode) },
+        // ------------------------------------------------
+        { "Boolean", NODE_MENU_BUTTON(BooleanNode) },
+        { "Value", NODE_MENU_BUTTON(ValueNode) },
+        { "Position", NODE_MENU_BUTTON(PositionNode) },
+        { "Color", NODE_MENU_BUTTON(ColorNode) },
+        // ------------------------------------------------
+        { "Merge Color", NODE_MENU_BUTTON(MergeColorNode) },
+        { "Split Color", NODE_MENU_BUTTON(SplitColorNode) }
+    };
+
+    // marks where horizontal lines are placed
+    m_addNodeMenuSplits = {
+        "Output",
+        "Color"
+    };
 }
 
 void GuiManager::destroy() {
     ImNodes::DestroyContext();
+}
+
+void GuiManager::update(float dt) {
+    auto tab = EditorTabNode::get();
+    if (!tab) return;
+
+    if (tab->m_expanded && m_expansionPercent < 1.f) {
+        m_expansionPercent += dt / .3f;
+    } else if (!tab->m_expanded && m_expansionPercent > 0.f) {
+        m_expansionPercent -= dt / .3f;
+    }
+
+    m_expansionPercent = std::min(std::max(m_expansionPercent, 0.f), 1.f);
 }
 
 void GuiManager::draw() {
@@ -47,36 +86,73 @@ void GuiManager::draw() {
 
     if (lowPassStrength > 0) return;
     
+    // easeinout implementation taken from cocos
+    // https://github.com/cocos2d/cocos2d-x/blob/cocos2d-x-2.2.3/cocos2dx/actions/CCActionEase.cpp#L344-L355
+    float easedExpansionPercent = m_expansionPercent;
+    float rate = 3.f;
+    easedExpansionPercent *= 2;
+    if (easedExpansionPercent < 1) easedExpansionPercent = .5f * powf(easedExpansionPercent, rate);
+    else                           easedExpansionPercent = 1.f - .5f * powf(2 - easedExpansionPercent, rate);
+
+    // figure out scale between imgui to cocos dimensions
+    // imgui-cocos provides utils but they work a bit differently and only work
+    // between ccpoint <-> imvec2 which isnt really what i need for most of this
     auto director = cocos2d::CCDirector::sharedDirector();
     auto width = director->m_obResolutionInPixels.width;
     auto ccwidth = cocos2d::CCScene::get()->getScaledContentWidth();
     auto scaleFactor = width / ccwidth;
-    cocos2d::CCSize size = {
-        370.f * scaleFactor,
-        85.f * scaleFactor
-    };
-    cocos2d::CCPoint pos = {
-        (director->m_obResolutionInPixels.width / 2.f) - (size.width / 2.f),
-        (director->m_obResolutionInPixels.height - size.height - (2.5f * scaleFactor))
-    };
-    size.width -= 40.f * scaleFactor;
-    ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
-    ImGui::SetNextWindowSize(ImVec2(size.width, size.height));
 
-    // draw main node editor
-    // nodes and links
-    ImGui::Begin("node editor", nullptr, ImGuiWindowFlags_NoDecoration);
+    // lerp between bar size (unexpanded) and fullscreen size (expanded) over easedExpansionPercent
+    cocos2d::CCSize winSize = {
+        std::lerp(380.f, cocos2d::CCScene::get()->getContentWidth() - 5.f, easedExpansionPercent) * scaleFactor,
+        std::lerp(70.f, cocos2d::CCScene::get()->getContentHeight() - 135.f, easedExpansionPercent) * scaleFactor
+    };
+
+    // then centre it
+    cocos2d::CCPoint pos = {
+        (director->m_obResolutionInPixels.width / 2.f) - (winSize.width / 2.f),
+        (director->m_obResolutionInPixels.height - winSize.height - (2.5f * scaleFactor))
+    };
+
+    // slide to the left a tad for bar size
+    pos.x -= (1.f - easedExpansionPercent) * 6.5f * scaleFactor;
+
+    // betteredit makes buttons on the left a bit wider
+    if (geode::Loader::get()->isModLoaded("hjfod.betteredit")) {
+        // shuffle left edge right a bit
+        pos.x += (1.f - easedExpansionPercent) * 12.f * scaleFactor;
+        winSize.width -= (1.f - easedExpansionPercent) * 12.f * scaleFactor;
+    }
+
+    ImGui::SetNextWindowPos(ImVec2(pos.x, pos.y));
+    ImGui::SetNextWindowSize(ImVec2(winSize.width, winSize.height));
+
+
+    ImGui::Begin("node-editor"_spr, nullptr, ImGuiWindowFlags_NoDecoration);
 
     ImNodes::PushColorStyle(ImNodesCol_Link, IM_COL32(125, 125, 125, 255));
+    auto btnCol = IM_COL32(43, 43, 43, 255);
+    ImGui::PushStyleColor(ImGuiCol_Button, btnCol);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, on::utils::brightenColor(btnCol, 16));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, on::utils::brightenColor(btnCol, 24));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, btnCol);
+    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, on::utils::brightenColor(btnCol, 16));
+    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, on::utils::brightenColor(btnCol, 24));
+    ImNodes::PushStyleVar(ImNodesStyleVar_NodePadding, ImVec2(8.f, 4.f));
+    ImNodes::PushStyleVar(ImNodesStyleVar_LinkThickness, 3.f);
+    ImNodes::PushStyleVar(ImNodesStyleVar_LinkLineSegmentsPerLength, .06f);
     ImNodes::BeginNodeEditor();
     
-    for (auto node : m_nodes) {
+    auto& nm = NodeManager::get();
+
+    for (auto node : nm.m_nodes) {
         node->draw();
     }
 
     int i = 0;
-    for (auto link : m_links) {
-        auto col = on::utils::pinColorForType(pinDataForPinID(link->m_from)->m_value);
+
+    for (auto link : nm.m_links) {
+        auto col = on::utils::pinColorForType(nm.pinDataForPinID(link->m_from)->m_value);
         ImNodes::PushColorStyle(ImNodesCol_Link, col);
         ImNodes::PushColorStyle(ImNodesCol_LinkHovered, on::utils::brightenColor(col, 16));
         ImNodes::PushColorStyle(ImNodesCol_LinkSelected, on::utils::brightenColor(col, 24));
@@ -89,6 +165,8 @@ void GuiManager::draw() {
     ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
 
     ImNodes::EndNodeEditor();
+    ImNodes::PopStyleVar(3);
+    ImGui::PopStyleColor(6);
     ImNodes::PopColorStyle();
 
     ImGui::End();
@@ -96,173 +174,72 @@ void GuiManager::draw() {
     // check for link creation or deletion
     int from, to;
     if (ImNodes::IsLinkCreated(&from, &to)) {
-        if (canPinsConnect(from, to)) {
-            // find an already connected link and disconnect
-            // should only be one but this can handle multiple
-            auto links = linkDataForPinID(to);
-            for (auto link : links) {
-                m_links.erase(std::remove(m_links.begin(), m_links.end(), link), m_links.end());
-            }
-
-            m_links.push_back(std::make_shared<LinkData>(from, to));
-        }
+        nm.onCreateLink(from, to);
     }
 
     int id;
     if (ImNodes::IsLinkDestroyed(&id)) {
-        deleteLink(id);
+        nm.deleteLink(id);
+    }
+
+    bool isDeleting = ImGui::IsKeyPressed(ImGuiKey_Delete, false) || (ImGui::IsKeyPressed(ImGuiKey_Backspace, false) && ImGui::GetIO().KeyAlt);
+    // geode::log::info("{} || {} && {}", ImGui::IsKeyPressed(ImGuiKey_Delete, false), ImGui::IsKeyPressed(ImGuiKey_Backspace, false), ImGui::GetIO().KeyAlt);
+    if (isDeleting) {
+        if (ImNodes::IsLinkHovered(&id)) {
+            nm.deleteLink(id);
+        }
+    
+        if (ImNodes::IsNodeHovered(&id)) {
+            nm.deleteNode(id);
+        }
+
+        std::vector<int> nodesToDelete = {};
+        for (auto node : nm.m_nodes) {
+            if (ImNodes::IsNodeSelected(node->m_id)) {
+                nodesToDelete.push_back(node->m_id);
+            }
+        }
+
+        for (auto id : nodesToDelete) {
+            nm.deleteNode(id);
+        }
     }
 
     // zoom only available because we're using Auburn's fork of imnodes
     // see Nelarius/imnodes #192
     if (ImNodes::IsEditorHovered() && ImGui::GetIO().MouseWheel != 0) {
+        geode::log::debug("{}", ImGui::GetIO().MouseWheelH);
         float zoom = ImNodes::EditorContextGetZoom() + ImGui::GetIO().MouseWheel * 0.1f;
         ImNodes::EditorContextSetZoom(zoom, ImGui::GetMousePos());
     }
 }
 
-sp_PinData GuiManager::pinDataForPinID(int id) {
-    for (auto node : m_nodes) {
-        for (auto input : node->m_inputs) {
-            if (input->m_id == id) return input;
-        }
+void GuiManager::drawAddNodeMenu() {
 
-        for (auto output : node->m_outputs) {
-            if (output->m_id == id) return output;
-        }
-    }
-
-    geode::log::error("Could not find pin data for pin {}!", id);
-    return nullptr;
 }
 
-bool GuiManager::canPinsConnect(int from, int to) {
-    auto dataFrom = pinDataForPinID(from);
-    auto dataTo = pinDataForPinID(to);
+void GuiManager::updatePreview() {
+    auto thread = std::thread([]{
+        geode::utils::thread::setName("Object Nodes Compute Thread");
 
-    return dataFrom->m_value.index() == dataTo->m_value.index();
-}
+        NodeManager::get().compute();
 
-void GuiManager::compute() {
-    for (auto node : m_nodes) {
-        if (node->m_inputs.size() == 0) {
-            node->computeAndPropagate();
-        }
-    }
-}
+        geode::Loader::get()->queueInMainThread([]{ 
+            auto res = NodeManager::get().m_result;
+            if (res.empty()) return;
+        
+            auto editor = LevelEditorLayer::get();
+            if (!editor) return;
+    
+            // see https://github.com/FireMario211/Object-Workshop/blob/main/src/nodes/ObjectItem.cpp
+            auto smartBlock = cocos2d::CCArray::create();
+            int renderLimit = 4096;
+            auto sprite = editor->m_editorUI->spriteFromObjectString(res, false, false, renderLimit, smartBlock, nullptr, nullptr);
+            editor->updateObjectColors(smartBlock);
+        
+            EditorTabNode::get()->updatePreview(sprite);
+        });
+    });
 
-std::vector<sp_LinkData> GuiManager::linkDataForPinID(int id) {
-    std::vector<sp_LinkData> ret = {};
-    for (auto link : m_links) {
-        if (link->m_from == id || link->m_to == id) ret.push_back(link);
-    }
-
-    return ret;
-}
-
-// sp_GuiNode GuiManager::nodeForNodeID(unsigned int id) {
-//     for (auto node : m_nodes) {
-//         if (node->m_id == id) return node;
-//     }
-
-//     geode::log::error("Could not find node data for node {}!", id);
-//     return nullptr;
-// }
-
-bool GuiManager::nodeIDExists(unsigned int id) {
-    return std::find(m_nodeIDsInUse.begin(), m_nodeIDsInUse.end(), id) != m_nodeIDsInUse.end();
-}
-
-bool GuiManager::pinIDExists(int id) {
-    return std::find(m_pinIDsInUse.begin(), m_pinIDsInUse.end(), id) != m_pinIDsInUse.end();
-}
-
-sp_GuiNode GuiManager::nodeForPinID(int id) {
-    for (auto node : m_nodes) {
-        for (auto input : node->m_inputs) {
-            if (input->m_id == id) return node;
-        }
-
-        for (auto output : node->m_outputs) {
-            if (output->m_id == id) return node;
-        }
-    }
-
-    geode::log::error("Could not find node data for pin {}!", id);
-    return nullptr;
-}
-
-
-unsigned int GuiManager::getNextNodeID() {
-    if (!m_recentlyDeletedNodeIDs.empty()) {
-        auto ret = m_recentlyDeletedNodeIDs.front();
-        m_recentlyDeletedNodeIDs.pop_front();
-        return ret;
-    }
-
-    // scary!
-    unsigned int ret = 0;
-    while (true) {
-        if (!nodeIDExists(ret)) {
-            m_nodeIDsInUse.push_back(ret);
-            return ret;
-        }
-        ret++;
-    }
-}
-
-int GuiManager::getNextPinID() {
-    if (!m_recentlyDeletedPinIDs.empty()) {
-        auto ret = m_recentlyDeletedPinIDs.front();
-        m_recentlyDeletedPinIDs.pop_front();
-        return ret;
-    }
-
-    // scary!
-    int ret = 0;
-    while (true) {
-        if (!pinIDExists(ret)) {
-            m_pinIDsInUse.push_back(ret);
-            return ret;
-        }
-        ret++;
-    }
-}
-
-void GuiManager::deleteNode(unsigned int id) {
-    // >:(
-    sp_GuiNode node;
-    for (auto checkNode : m_nodes) {
-        if (checkNode->m_id == id) {
-            // ah ha
-            node = checkNode;
-            break;
-        }
-    }
-
-    if (!node) {
-        geode::log::error("Attempted to delete nonexistent node {}!", id);
-        return;
-    }
-
-    m_recentlyDeletedNodeIDs.push_back(id);
-    m_nodeIDsInUse.erase(std::remove(m_nodeIDsInUse.begin(), m_nodeIDsInUse.end(), id), m_nodeIDsInUse.end());
-
-    for (auto pin : node->m_inputs) {
-        m_recentlyDeletedPinIDs.push_back(pin->m_id);
-        m_pinIDsInUse.erase(std::remove(m_pinIDsInUse.begin(), m_pinIDsInUse.end(), pin->m_id), m_pinIDsInUse.end());
-    }
-
-    for (auto pin : node->m_outputs) {
-        m_recentlyDeletedPinIDs.push_back(pin->m_id);
-        m_pinIDsInUse.erase(std::remove(m_pinIDsInUse.begin(), m_pinIDsInUse.end(), pin->m_id), m_pinIDsInUse.end());
-    }
-
-    m_nodes.erase(std::remove(m_nodes.begin(), m_nodes.end(), node), m_nodes.end());
-}
-
-void GuiManager::deleteLink(int id) {
-    // link ids are always just the index they are in the list of links
-    // nice and simple
-    m_links.erase(m_links.begin() + id);
+    thread.detach();
 }

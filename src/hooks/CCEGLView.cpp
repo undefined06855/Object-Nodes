@@ -13,6 +13,10 @@ void HookedCCEGLView::onGLFWMouseScrollCallback(GLFWwindow* window, double xoffs
     ImGui::GetIO().AddMouseWheelEvent(xoffset, yoffset);
 }
 
+void HookedCCEGLView::onGLFWKeyCallbacK(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    CCEGLView::onGLFWKeyCallback(window, key, scancode, action, mods);
+}
+
 void HookedCCEGLView::toggleFullScreen(bool fullscreen, bool borderless, bool fix) {
     if (!ImGuiCocos::get().isInitialized()) {
         CCEGLView::toggleFullScreen(fullscreen, borderless, fix);
