@@ -46,13 +46,16 @@ void GuiManager::setup() {
         { "Color", NODE_MENU_BUTTON(ColorNode) },
         // ------------------------------------------------
         { "Merge Color", NODE_MENU_BUTTON(MergeColorNode) },
-        { "Split Color", NODE_MENU_BUTTON(SplitColorNode) }
+        { "Split Color", NODE_MENU_BUTTON(SplitColorNode) },
+        // ------------------------------------------------
+        { "Array", NODE_MENU_BUTTON(ArrayNode) }
     };
 
     // marks where horizontal lines are placed
     m_addNodeMenuSplits = {
         "Output",
-        "Color"
+        "Color",
+        "Split Color"
     };
 }
 
@@ -128,7 +131,9 @@ void GuiManager::draw() {
     ImGui::SetNextWindowSize(ImVec2(winSize.width, winSize.height));
 
 
-    ImGui::Begin("node-editor"_spr, nullptr, ImGuiWindowFlags_NoDecoration);
+    // ImGuiWindowFlags_NoBringToFrontOnFocus used to prevent the node picker
+    // window going behind the node editor window
+    ImGui::Begin("node-editor"_spr, nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
     ImNodes::PushColorStyle(ImNodesCol_Link, IM_COL32(125, 125, 125, 255));
     auto btnCol = IM_COL32(43, 43, 43, 255);
@@ -171,6 +176,8 @@ void GuiManager::draw() {
 
     ImGui::End();
 
+    if (m_addNodeMenuShowing) drawAddNodeMenu();
+
     // check for link creation or deletion
     int from, to;
     if (ImNodes::IsLinkCreated(&from, &to)) {
@@ -208,14 +215,31 @@ void GuiManager::draw() {
     // zoom only available because we're using Auburn's fork of imnodes
     // see Nelarius/imnodes #192
     if (ImNodes::IsEditorHovered() && ImGui::GetIO().MouseWheel != 0) {
-        geode::log::debug("{}", ImGui::GetIO().MouseWheelH);
         float zoom = ImNodes::EditorContextGetZoom() + ImGui::GetIO().MouseWheel * 0.1f;
         ImNodes::EditorContextSetZoom(zoom, ImGui::GetMousePos());
     }
 }
 
 void GuiManager::drawAddNodeMenu() {
+    ImGui::Begin("node-editor-add-node-menu"_spr, nullptr, ImGuiWindowFlags_NoDecoration);
+    
+    for (auto& pair : m_addNodeMenuButtons) {
+        auto& label = pair.first;
+        auto& callback = pair.second;
 
+        bool ret = ImGui::Button(label.c_str());
+        if (ret) {
+            auto node = callback();
+            NodeManager::get().m_nodes.push_back(node);
+        }
+
+        if (std::find(m_addNodeMenuSplits.begin(), m_addNodeMenuSplits.end(), label) != m_addNodeMenuSplits.end()) {
+            // add break here
+            ImGui::TextUnformatted("-------------");
+        }
+    }
+
+    ImGui::End();
 }
 
 void GuiManager::updatePreview() {
@@ -242,4 +266,15 @@ void GuiManager::updatePreview() {
     });
 
     thread.detach();
+}
+
+// was going to be used for auto-update for selected objects
+// maybe add if GameObject::deselectObject isnt INLINED ON WINDOWS
+void GuiManager::updatePreviewIfContainsSelectedObjectsNode() {
+    for (auto node : NodeManager::get().m_nodes) {
+        if (node->getName() == "SelectedObjectsNode" && /* auto-update */ std::get<bool>(node->m_inputs[0]->m_value)) {
+            updatePreview();
+            return;
+        }
+    }
 }

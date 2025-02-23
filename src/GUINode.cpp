@@ -1,9 +1,9 @@
 #include "GUINode.hpp"
+#include "imnodes_internal.h"
 #include "structs.hpp"
 #include "utils.hpp"
 #include "NodeManager.hpp"
 #include "GUIManager.hpp"
-#include <imgui.h>
 
 GuiNode::GuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs)
     : m_beginParsingFromThisNode(false)
@@ -242,4 +242,25 @@ void GuiNode::computeAndPropagate() {
         if (m_outputs.size() == 0) geode::log::debug("No outputs on this node!");
         if (isFinalCompute) break;
     }
+}
+
+
+// code taken from what BeginNode does
+// hopefully calling ObjectPoolFindOrCreateIndex outside of the render loop
+// doesn't fuck things up too much
+
+cocos2d::CCPoint GuiNode::getNodePos() {
+    ImNodesEditorContext& editor = ImNodes::EditorContextGet();
+    const int node_idx = ImNodes::ObjectPoolFindOrCreateIndex(editor.Nodes, m_id);
+    GImNodes->CurrentNodeIdx = node_idx;
+    ImNodeData& node = editor.Nodes.Pool[node_idx];
+    return { node.Origin.x, node.Origin.y };
+}
+
+void GuiNode::setNodePos(cocos2d::CCPoint pos) {
+    ImNodesEditorContext& editor = ImNodes::EditorContextGet();
+    const int node_idx = ImNodes::ObjectPoolFindOrCreateIndex(editor.Nodes, m_id);
+    GImNodes->CurrentNodeIdx = node_idx;
+    ImNodeData& node = editor.Nodes.Pool[node_idx];
+    node.Origin = ImVec2(pos.x, pos.y);
 }

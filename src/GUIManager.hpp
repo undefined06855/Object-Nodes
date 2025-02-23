@@ -23,5 +23,6 @@ public:
     void draw();
     void drawAddNodeMenu();
 
+    void updatePreviewIfContainsSelectedObjectsNode();
     void updatePreview();
 };

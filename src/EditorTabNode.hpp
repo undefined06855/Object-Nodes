@@ -12,6 +12,7 @@ public:
     cocos2d::CCSprite* m_toggleExpandSprite;
 
     cocos2d::CCNodeRGBA* m_previewResultLayer;
+    cocos2d::CCLabelBMFont* m_previewResultObjectCount;
 
     void setVisible(bool visible);
 
@@ -21,5 +22,5 @@ public:
     void onToggleExpand(cocos2d::CCObject* sender);
     void onToggleExpandUnanimatableProperties();
 
-    void updatePreview(cocos2d::CCNode* node);
+    void updatePreview(cocos2d::CCSprite* node);
 };

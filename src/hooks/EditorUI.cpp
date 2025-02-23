@@ -21,6 +21,8 @@ void HookedEditorUI::toggleMode(cocos2d::CCObject* sender) {
 }
 
 void HookedEditorUI::onPlaytest(cocos2d::CCObject* sender) {
+    geode::utils::clipboard::write(LevelEditorLayer::get()->getLevelString());
+
     // BUG: if user holds down button, presses enter, then releases, they can
     // make it expand while invisible
     // it does stop playtest because of fallback check so you dont get

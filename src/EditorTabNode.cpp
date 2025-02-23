@@ -75,7 +75,15 @@ bool EditorTabNode::init() {
     m_previewResultLayer->setID("preview-result-layer");
     m_previewResultLayer->setAnchorPoint({ .5f, 1.f });
     m_previewResultLayer->setContentSize({ getScaledContentWidth() * 1.5f, 100.f });
+    m_previewResultLayer->setCascadeOpacityEnabled(true);
+    m_previewResultLayer->setCascadeColorEnabled(true); // might as well
     addChildAtPosition(m_previewResultLayer, geode::Anchor::Top, { 0.f, -30.f });
+
+    m_previewResultObjectCount = cocos2d::CCLabelBMFont::create("(0 objects)", "bigFont.fnt");
+    m_previewResultObjectCount->setID("preview-result-count");
+    m_previewResultObjectCount->setAnchorPoint({ 1.f, 0.f }); // bottom right
+    m_previewResultObjectCount->setScale(.35f);
+    m_previewResultLayer->addChildAtPosition(m_previewResultObjectCount, geode::Anchor::BottomRight, { -5.f, 5.f });
 
     return true;
 }
@@ -194,13 +202,19 @@ void EditorTabNode::onToggleExpandUnanimatableProperties() {
     }
 }
 
-void EditorTabNode::updatePreview(cocos2d::CCNode* node) {
-    m_previewResultLayer->removeAllChildren();
+// technically only has to be ccnodergba and not ccsprite but we only ever use
+// this with ccsprite anyway and just in case for the future
+void EditorTabNode::updatePreview(cocos2d::CCSprite* node) {
+    auto old = m_previewResultLayer->getChildByType<cocos2d::CCSprite>(0);
+    if (old) old->removeFromParent();
 
     // fit node in space
+    float previewRatio = m_previewResultLayer->getContentWidth() / m_previewResultLayer->getContentHeight();
+    float nodeRatio = node->getContentWidth() / node->getContentHeight();
+
     float minSize = 30.f;
-    if (node->getContentWidth() < node->getContentHeight()) {
-        // taller than wide
+    if (previewRatio > nodeRatio) {
+        // adjust for height
         float maxSize = m_previewResultLayer->getContentHeight() * 0.9f;
         if (node->getContentHeight() > maxSize) {
             node->setScale(maxSize / node->getContentHeight());
@@ -208,7 +222,7 @@ void EditorTabNode::updatePreview(cocos2d::CCNode* node) {
             node->setScale(minSize / node->getContentHeight());
         }
     } else {
-        // wider than tall
+        // adjust for width
         float maxSize = m_previewResultLayer->getContentWidth() * 0.9f;
         if (node->getContentWidth() > maxSize) {
             node->setScale(maxSize / node->getContentWidth());
@@ -218,4 +232,9 @@ void EditorTabNode::updatePreview(cocos2d::CCNode* node) {
     }
 
     m_previewResultLayer->addChildAtPosition(node, geode::Anchor::Center);
+    // allow fading (and colour because why not)
+    node->setCascadeOpacityEnabled(true);
+    node->setCascadeColorEnabled(true);
+
+    m_previewResultObjectCount->setString(fmt::format("({} objects)", node->getChildrenCount()).c_str());    
 }

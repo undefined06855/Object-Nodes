@@ -45,12 +45,11 @@ LinkData::LinkData(int from, int to)
 
 GameObjectData::GameObjectData(int id)
     : m_objectValues({}) {
-    // thanks to https://flowvix.github.io/gd-info-explorer/
+    
     // these are just common properties that should probably be set
-
     m_objectValues[1] = id;
-    m_objectValues[2] = 0.f; // x
-    m_objectValues[3] = 0.f; // y
+    m_objectValues[2] = "0"; // x
+    m_objectValues[3] = "0"; // y
 }
 
 GameObjectData::GameObjectData(GameObject* obj)
@@ -92,6 +91,7 @@ std::string GameObjectData::commitToString() {
 
 template <typename T>
 T GameObjectData::propertyAs(int id) {
+    // if we cant find it...
     if (m_objectValues.find(id) == m_objectValues.end()) {
         if constexpr (std::is_same_v<T, std::string>) m_objectValues[id] = "";
         else m_objectValues[id] = "0"; // zero or false
@@ -103,5 +103,9 @@ T GameObjectData::propertyAs(int id) {
     else if constexpr (std::is_same_v<T, int>) return std::stoi(value);
     else if constexpr (std::is_same_v<T, double>) return std::stod(value);
     else if constexpr (std::is_same_v<T, bool>) return value == "1";
-    else static_assert(false, "unsupported type for object property!!");
 }
+
+template std::string GameObjectData::propertyAs<std::string>(int);
+template int GameObjectData::propertyAs<int>(int);
+template double GameObjectData::propertyAs<double>(int);
+template bool GameObjectData::propertyAs<bool>(int);

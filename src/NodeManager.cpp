@@ -30,14 +30,7 @@ NodeManager& NodeManager::get() {
 }
 
 void NodeManager::setup() {
-    m_nodes.push_back(std::make_shared<CreateObjectNode>());
-    m_nodes.push_back(std::make_shared<SelectedObjectsNode>());
-    m_nodes.push_back(std::make_shared<ColorNode>());
-    m_nodes.push_back(std::make_shared<ColorNode>());
-    m_nodes.push_back(std::make_shared<ValueNode>());
-    m_nodes.push_back(std::make_shared<PositionNode>());
-    m_nodes.push_back(std::make_shared<OutputNode>());
-    m_nodes.push_back(std::make_shared<MixColorNode>());
+    // add something here if needed
 }
 
 sp_PinData NodeManager::pinDataForPinID(int id) {

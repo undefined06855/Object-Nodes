@@ -15,7 +15,8 @@
 
 	"dependencies": {
 		"alphalaneous.editortab_api": "v1.0.10",
-		"geode.node-ids": "v1.20.0"
+		"geode.node-ids": "v1.20.0",
+		"geode.custom-keybinds": "v1.10.3"
 	},
 
 	"resources": {

@@ -1,4 +1,5 @@
 #pragma once
+#include "Geode/cocos/cocoa/CCGeometry.h"
 #include "structs.hpp"
 
 enum class PinOrientation {
@@ -37,5 +38,8 @@ public:
     void computeAndPropagate();
     virtual bool compute() = 0;
     virtual std::string getName() const = 0;
+
+    cocos2d::CCPoint getNodePos();
+    void setNodePos(cocos2d::CCPoint pos);
 };
 using sp_GuiNode = std::shared_ptr<GuiNode>;
