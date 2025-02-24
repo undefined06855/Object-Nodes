@@ -1,5 +1,5 @@
 #pragma once
-#include "../GUINode.hpp"
+#include "../GuiNode.hpp"
 #include "Geode/binding/EditorUI.hpp"
 #include <imgui.h>
 

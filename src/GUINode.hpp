@@ -1,5 +1,4 @@
 #pragma once
-#include "Geode/cocos/cocoa/CCGeometry.h"
 #include "structs.hpp"
 
 enum class PinOrientation {
@@ -7,10 +6,8 @@ enum class PinOrientation {
 };
 
 class GuiNode {
-protected:
-    GuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs);
-
 public:
+    GuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs);
     virtual ~GuiNode() = default;
 
     bool m_beginParsingFromThisNode;
@@ -43,3 +40,9 @@ public:
     void setNodePos(cocos2d::CCPoint pos);
 };
 using sp_GuiNode = std::shared_ptr<GuiNode>;
+
+class CollectingGuiNode : public GuiNode {
+public:
+    CollectingGuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs);
+    std::vector<sp_GameObjectData> m_objects;  
+};

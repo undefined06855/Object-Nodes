@@ -1,6 +1,6 @@
 #include "CCEGLView.hpp"
 #include <imgui-cocos.hpp>
-#include "../GUIManager.hpp"
+#include "../GuiManager.hpp"
 
 void HookedCCEGLView::onGLFWMouseCallBack(GLFWwindow* window, int button, int action, int mods) {
     // check if need to eat

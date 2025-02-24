@@ -1,10 +1,6 @@
 #include "NodeManager.hpp"
-#include "GUIManager.hpp"
+#include "GuiManager.hpp"
 #include "Geode/loader/Log.hpp"
-#include "nodes/CreateObjectNode.hpp"
-#include "nodes/OutputNode.hpp"
-#include "nodes/PrimitiveValueNodes.hpp"
-#include "nodes/SelectedObjectsNode.hpp"
 #include "nodes/nodes.hpp"
 #include <memory>
 
@@ -60,7 +56,7 @@ void NodeManager::compute() {
     if (m_computing) return;
     m_computing = true;
 
-    std::vector<std::shared_ptr<OutputNode>> outputNodes = {};
+    std::vector<std::shared_ptr<CollectingGuiNode>> outputNodes = {};
     std::vector<std::shared_ptr<GuiNode>> inputNodes = {};
 
     geode::log::debug("Begin compute...");
@@ -71,7 +67,7 @@ void NodeManager::compute() {
     geode::log::pushNest();
     for (auto node : m_nodes) {
         if (node->m_endParsingAtThisNode) {
-            auto cast = std::dynamic_pointer_cast<OutputNode>(node);
+            auto cast = std::dynamic_pointer_cast<CollectingGuiNode>(node);
             outputNodes.push_back(cast);
             geode::log::debug("Found output #{}", outputNodes.size());
         } else if (node->m_beginParsingFromThisNode) {
@@ -79,18 +75,15 @@ void NodeManager::compute() {
             geode::log::debug("Found input #{}", inputNodes.size());
         }
 
-        // and reset this here because why not
+        // and reset members
         node->m_computedInputCount = 0;
         node->m_computeIteration = 0;
+        if (auto cast = std::dynamic_pointer_cast<CollectingGuiNode>(node)) {
+            cast->m_objects.clear();
+        }
     }
     geode::log::popNest();
     geode::log::debug("Traverse finished, {} input -> {} output", inputNodes.size(), outputNodes.size());
-
-    // clear all gathered objects from output nodes
-    geode::log::debug("Clear all gathered objects from {} output nodes...", outputNodes.size());
-    for (auto node : outputNodes) {
-        node->m_objects.clear();
-    }
 
     // compute and propagate all input nodes
     geode::log::debug("Compute and propagate {} input nodes...", inputNodes.size());

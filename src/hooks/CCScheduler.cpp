@@ -1,5 +1,5 @@
 #include "CCScheduler.hpp"
-#include "../GUIManager.hpp"
+#include "../GuiManager.hpp"
 
 void HookedCCScheduler::update(float dt) {
     CCScheduler::update(dt);

@@ -1,6 +1,6 @@
-#include "GUIManager.hpp"
+#include "GuiManager.hpp"
 #include "EditorTabNode.hpp"
-#include "GUINode.hpp"
+#include "GuiNode.hpp"
 #include "nodes/MergeSplitColorNodes.hpp"
 #include "nodes/OutputNode.hpp"
 #include "nodes/nodes.hpp"
@@ -221,6 +221,10 @@ void GuiManager::draw() {
 }
 
 void GuiManager::drawAddNodeMenu() {
+    if (m_addNodeMenuJustAppeared) {
+        m_addNodeMenuJustAppeared = false;
+    }
+
     ImGui::Begin("node-editor-add-node-menu"_spr, nullptr, ImGuiWindowFlags_NoDecoration);
     
     for (auto& pair : m_addNodeMenuButtons) {
@@ -277,4 +281,9 @@ void GuiManager::updatePreviewIfContainsSelectedObjectsNode() {
             return;
         }
     }
+}
+
+void GuiManager::openAddNodeMenu() {
+    m_addNodeMenuJustAppeared = true;
+    m_addNodeMenuShowing = true;
 }

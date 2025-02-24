@@ -1,5 +1,5 @@
 #pragma once
-#include "../GUINode.hpp"
+#include "../GuiNode.hpp"
 #include "../NodeManager.hpp"
 #include <imgui.h>
 

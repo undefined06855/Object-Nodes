@@ -1,9 +1,13 @@
-#include "GUINode.hpp"
+#include "GuiNode.hpp"
 #include "imnodes_internal.h"
 #include "structs.hpp"
 #include "utils.hpp"
 #include "NodeManager.hpp"
-#include "GUIManager.hpp"
+#include "GuiManager.hpp"
+
+CollectingGuiNode::CollectingGuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs)
+    : GuiNode(title, color, inputs, outputs)
+    , m_objects({}) {}
 
 GuiNode::GuiNode(std::string title, unsigned int color, std::vector<sp_PinData> inputs, std::vector<sp_PinData> outputs)
     : m_beginParsingFromThisNode(false)
@@ -216,7 +220,7 @@ void GuiNode::computeAndPropagate() {
 
     geode::log::debug("{} computed inputs / {} connected inputs -> {}", m_computedInputCount, connectedInputCount, m_computedInputCount >= connectedInputCount);
 
-    if (m_computedInputCount < connectedInputCount) return;
+    if (m_computedInputCount <= connectedInputCount) return;
 
     geode::log::debug("All inputs computed, compute and propagate...");
 
@@ -230,9 +234,12 @@ void GuiNode::computeAndPropagate() {
         for (auto output : m_outputs) {
             auto links = nm.linkDataForPinID(output->m_id);
             if (links.size() == 0) geode::log::debug("No links connected to output pin!");
+            // two loops just in case!
             for (auto link : links) {
                 auto pin = nm.pinDataForPinID(link->m_to);
                 pin->m_value = output->m_value;
+            }
+            for (auto link : links) {
                 auto node = nm.nodeForPinID(link->m_to);
                 node->computeAndPropagate();
             }

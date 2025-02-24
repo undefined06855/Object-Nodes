@@ -1,5 +1,5 @@
 #include "EditorPauseLayer.hpp"
-#include "../GUIManager.hpp"
+#include "../GuiManager.hpp"
 
 // taken from editormusic
 // hide bar whenever you exit the editor

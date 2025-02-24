@@ -1,5 +1,5 @@
 #include "EditorTabNode.hpp"
-#include "GUIManager.hpp"
+#include "GuiManager.hpp"
 #include "Geode/cocos/layers_scenes_transitions_nodes/CCLayer.h"
 #include "NodeManager.hpp"
 #include "Geode/binding/CCMenuItemSpriteExtra.hpp"

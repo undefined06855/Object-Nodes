@@ -1,4 +1,4 @@
-#include "GUIManager.hpp"
+#include "GuiManager.hpp"
 #include "EditorTabNode.hpp"
 #include "Geode/loader/Event.hpp"
 #include "Geode/loader/EventV2.hpp"
@@ -52,8 +52,7 @@ $on_mod(Loaded) {
 
     new geode::EventListener([=](keybinds::InvokeBindEvent* event) {
         if (ImGui::GetIO().WantCaptureMouse) {
-            auto& gm = GuiManager::get();
-            gm.m_addNodeMenuShowing = !gm.m_addNodeMenuShowing;
+            GuiManager::get().openAddNodeMenu();
             return geode::ListenerResult::Stop;
         }
         

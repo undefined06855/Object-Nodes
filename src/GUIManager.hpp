@@ -1,5 +1,5 @@
 #pragma once
-#include "GUINode.hpp"
+#include "GuiNode.hpp"
 
 class GuiManager {
 public:
@@ -10,6 +10,7 @@ public:
     float m_expansionPercent;
 
     bool m_addNodeMenuShowing;
+    bool m_addNodeMenuJustAppeared;
 
     bool m_showDebug;
 
@@ -25,4 +26,6 @@ public:
 
     void updatePreviewIfContainsSelectedObjectsNode();
     void updatePreview();
+
+    void openAddNodeMenu();
 };
